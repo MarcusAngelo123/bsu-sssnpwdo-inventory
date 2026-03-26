@@ -162,6 +162,21 @@ tbody td{padding:12px 16px;vertical-align:middle}
 </head>
 <body>
 
+<!-- LOGIN SCREEN -->
+<div id="login-screen" style="position:fixed;inset:0;background:#F0E8E8;display:flex;align-items:center;justify-content:center;z-index:9999;">
+  <div style="background:white;padding:30px;border-radius:12px;width:320px;border:1px solid #ddd;">
+    <h2 style="margin-bottom:15px;color:#7B1D1D;">Login</h2>
+    
+    <input type="email" id="email" placeholder="Email" style="width:100%;padding:10px;margin-bottom:10px;">
+    <input type="password" id="password" placeholder="Password" style="width:100%;padding:10px;margin-bottom:15px;">
+    
+    <button onclick="login()" style="width:100%;padding:10px;background:#7B1D1D;color:white;border:none;border-radius:6px;">
+      Login
+    </button>
+    
+    <p id="login-error" style="color:red;font-size:12px;margin-top:10px;"></p>
+  </div>
+</div>
 <!-- Loading screen -->
 <div class="loading-screen" id="loading">
   <div class="spinner"></div>
@@ -241,6 +256,24 @@ tbody td{padding:12px 16px;vertical-align:middle}
 <div id="mc"></div>
 
 <script>
+// 🔐 LOGIN FUNCTION
+async function login() {
+  const email = document.getElementById('email').value;
+  const password = document.getElementById('password').value;
+
+  const { data, error } = await db.auth.signInWithPassword({
+    email,
+    password
+  });
+
+  if (error) {
+    document.getElementById('login-error').textContent = error.message;
+  } else {
+    document.getElementById('login-screen').style.display = 'none';
+    startApp();
+  }
+}
+  
 // ── SUPABASE CONFIG ──
 const SUPA_URL = 'https://ukwtlomhykasmufybjvk.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVrd3Rsb21oeWthc211ZnlianZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0OTc1ODQsImV4cCI6MjA5MDA3MzU4NH0.M-TlY_WqeLmQSISAoWJgJKhZlW3rqRnCZNI_ReqLDZM';
@@ -552,7 +585,25 @@ async function init(){
   }
 }
 
-init();
+// CHECK SESSION FIRST
+async function checkUser() {
+  const { data: { session } } = await db.auth.getSession();
+
+  if (session) {
+    document.getElementById('login-screen').style.display = 'none';
+    startApp();
+  } else {
+    document.getElementById('loading').style.display = 'none';
+  }
+}
+
+// START APP ONLY AFTER LOGIN
+function startApp() {
+  document.getElementById('app-main').style.display = 'block';
+  init();
+}
+
+checkUser();
 </script>
 </body>
 </html>
