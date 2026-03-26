@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BSU SSSNPWD Office — Supply Inventory System</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --maroon:#7B1D1D;--maroon-dark:#5A1212;--maroon-mid:#9B3030;
+  --maroon-light:#F5ECEC;--maroon-pale:#FDF7F7;
+  --gold:#C9922A;--gold-light:#F5DFA0;
+  --text:#1A1A1A;--text-2:#555;--text-3:#888;
+  --border:#E8E0E0;--border-2:#D4C8C8;--white:#fff;
+  --ok:#1A6B3A;--ok-bg:#E6F4EC;
+  --warn:#7A5000;--warn-bg:#FEF3D0;
+  --danger:#8B1A1A;--danger-bg:#FDECEA;
+  --radius:10px;--radius-lg:16px;--bg:#F0E8E8;
+}
+html,body{min-height:100vh}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text)}
+
+.header{background:linear-gradient(135deg,var(--maroon-dark) 0%,var(--maroon) 60%,var(--maroon-mid) 100%);position:sticky;top:0;z-index:50}
+.header::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(45deg,transparent,transparent 40px,rgba(255,255,255,.025) 40px,rgba(255,255,255,.025) 41px);pointer-events:none}
+.header-inner{position:relative;z-index:1;display:flex;align-items:center;gap:20px;padding:18px 32px 14px;max-width:1400px;margin:0 auto}
+.seal {
+  width: 70px;
+  height: 70px;
+  background: #fff;
+  border-radius: 50%;
+  padding: 6px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.seal img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.htext{flex:1}
+.h-univ{font-family:'DM Serif Display',serif;font-size:17px;color:var(--gold-light);letter-spacing:.3px}
+.h-office{font-size:12.5px;color:rgba(255,255,255,.72);font-weight:300;margin-top:2px}
+.h-badge{display:inline-block;font-size:10px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;background:var(--gold);color:#fff;padding:3px 10px;border-radius:99px;margin-top:6px}
+.header-sub{background:rgba(0,0,0,.22);border-top:1px solid rgba(255,255,255,.08)}
+.header-sub-inner{max-width:1400px;margin:0 auto;padding:8px 32px;display:flex;align-items:center;justify-content:space-between;font-size:12px}
+.hs-title{font-family:'DM Serif Display',serif;font-size:13px;color:rgba(255,255,255,.9)}
+.hs-right{display:flex;align-items:center;gap:14px}
+.hs-date{color:rgba(255,255,255,.55)}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:#4ade80;display:inline-block;margin-right:5px}
+.sync-dot.syncing{background:var(--gold);animation:pulse .8s ease-in-out infinite}
+.sync-dot.error{background:#f87171}
+.sync-label{font-size:11px;color:rgba(255,255,255,.6)}
+
+.main{max-width:1400px;margin:0 auto;padding:24px 32px 60px}
+
+.stat-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:22px}
+.stat-card{background:var(--white);border-radius:var(--radius-lg);padding:18px 20px;border:1px solid var(--border);position:relative;overflow:hidden;transition:transform .15s,box-shadow .15s;cursor:default}
+.stat-card:hover{transform:translateY(-2px);box-shadow:0 6px 24px rgba(123,29,29,.1)}
+.stat-card::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:var(--radius-lg) var(--radius-lg) 0 0}
+.stat-card:nth-child(1)::after{background:var(--maroon)}
+.stat-card:nth-child(2)::after{background:#1A6B3A}
+.stat-card:nth-child(3)::after{background:var(--gold)}
+.stat-card:nth-child(4)::after{background:#8B1A1A}
+.sc-label{font-size:11px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:var(--text-3);margin-bottom:8px}
+.sc-val{font-family:'DM Serif Display',serif;font-size:34px;line-height:1}
+.sc-val.c-ok{color:var(--ok)}.sc-val.c-warn{color:var(--gold)}.sc-val.c-danger{color:var(--danger)}
+.sc-sub{font-size:11px;color:var(--text-3);margin-top:5px}
+
+.alert{background:var(--warn-bg);border:1px solid #E8C97A;border-radius:var(--radius);padding:12px 18px;font-size:13px;color:var(--warn);display:flex;gap:10px;align-items:flex-start;margin-bottom:20px}
+
+.tabs{display:flex;border-bottom:2px solid var(--border);margin-bottom:20px}
+.tab{padding:10px 22px;font-size:13.5px;font-weight:500;cursor:pointer;border:none;background:none;font-family:'DM Sans',sans-serif;color:var(--text-3);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s}
+.tab.active{color:var(--maroon);border-bottom-color:var(--maroon)}
+.tab:hover:not(.active){color:var(--text)}
+
+.toolbar{display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap}
+.sw{flex:1;min-width:180px;position:relative}
+.sw input{width:100%;padding:9px 12px 9px 36px;border:1px solid var(--border-2);border-radius:var(--radius);font-family:'DM Sans',sans-serif;font-size:13px;background:var(--white);color:var(--text);outline:none;transition:border .15s}
+.sw input:focus{border-color:var(--maroon)}
+.sw-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:14px;pointer-events:none}
+select{padding:9px 14px;border:1px solid var(--border-2);border-radius:var(--radius);font-family:'DM Sans',sans-serif;font-size:13px;background:var(--white);color:var(--text);outline:none;cursor:pointer}
+select:focus{border-color:var(--maroon)}
+.btn{padding:9px 20px;border-radius:var(--radius);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;border:1px solid transparent;transition:all .15s;white-space:nowrap}
+.btn-primary{background:var(--maroon);color:#fff;border-color:var(--maroon)}
+.btn-primary:hover{background:var(--maroon-dark)}
+.btn-outline{background:var(--white);color:var(--text);border-color:var(--border-2)}
+.btn-outline:hover{background:var(--maroon-light);border-color:var(--maroon);color:var(--maroon)}
+
+.table-wrap{background:var(--white);border-radius:var(--radius-lg);border:1px solid var(--border);overflow:hidden}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{padding:12px 16px;text-align:left;font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--text-3);background:var(--maroon-pale);border-bottom:1px solid var(--border)}
+tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:var(--maroon-pale)}
+tbody td{padding:12px 16px;vertical-align:middle}
+
+.bar-wrap{display:flex;align-items:center;gap:8px}
+.bar{width:76px;height:5px;background:#EDE4E4;border-radius:3px;overflow:hidden;flex-shrink:0}
+.bar-fill{height:100%;border-radius:3px;transition:width .4s}
+.bar-pct{font-size:11px;color:var(--text-3);min-width:28px}
+
+.badge{display:inline-flex;align-items:center;gap:5px;padding:3px 11px;border-radius:99px;font-size:11px;font-weight:600}
+.badge::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.55}
+.b-ok{background:var(--ok-bg);color:var(--ok)}.b-low{background:var(--warn-bg);color:var(--warn)}.b-critical{background:var(--danger-bg);color:var(--danger)}
+
+.acts{display:flex;gap:5px;flex-wrap:wrap}
+.act{padding:4px 11px;border-radius:7px;font-size:11.5px;font-weight:500;cursor:pointer;border:1px solid var(--border-2);background:var(--white);color:var(--text-2);font-family:'DM Sans',sans-serif;transition:all .12s}
+.act:hover{background:var(--maroon-light);border-color:var(--maroon);color:var(--maroon)}
+.act.del:hover{background:var(--danger-bg);border-color:#EAACAC;color:var(--danger)}
+.act:disabled{opacity:.4;cursor:not-allowed}
+
+.log-wrap{background:var(--white);border-radius:var(--radius-lg);border:1px solid var(--border);padding:20px 24px}
+.log-entry{display:flex;align-items:flex-start;gap:14px;padding:10px 0;border-bottom:1px solid var(--border)}
+.log-entry:last-child{border-bottom:none}
+.log-time{color:var(--text-3);font-size:11px;padding-top:2px;min-width:120px;flex-shrink:0}
+.log-dot{width:7px;height:7px;border-radius:50%;background:var(--maroon);flex-shrink:0;margin-top:5px;opacity:.45}
+.log-msg{color:var(--text-2);font-size:13px;line-height:1.5}
+.log-msg strong{color:var(--maroon);font-weight:600}
+
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:999;display:flex;align-items:center;justify-content:center;padding:20px}
+.modal{background:var(--white);border-radius:var(--radius-lg);padding:28px;width:400px;max-width:100%;border:1px solid var(--border);box-shadow:0 24px 64px rgba(0,0,0,.18);animation:fadeUp .25s ease;max-height:90vh;overflow-y:auto}
+.modal-title{font-family:'DM Serif Display',serif;font-size:20px;color:var(--maroon);margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid var(--border)}
+.fg{margin-bottom:16px}
+.fg label{display:block;font-size:11px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;color:var(--text-3);margin-bottom:5px}
+.fg input,.fg select{width:100%;padding:10px 13px;border:1px solid var(--border-2);border-radius:var(--radius);font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);background:var(--white);outline:none;transition:border .15s}
+.fg input:focus,.fg select:focus{border-color:var(--maroon)}
+.modal-btns{display:flex;gap:10px;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)}
+.info-box{background:var(--maroon-pale);border-radius:var(--radius);padding:12px 16px;margin-bottom:18px;font-size:13px;border-left:3px solid var(--maroon)}
+.info-box strong{color:var(--maroon)}
+
+.toast{position:fixed;bottom:28px;right:28px;z-index:9999;background:var(--maroon);color:#fff;padding:12px 20px;border-radius:var(--radius);font-size:13px;font-weight:500;box-shadow:0 8px 28px rgba(0,0,0,.2);animation:fadeUp .25s ease;max-width:320px}
+.toast.success{background:#166534}
+.toast.error-t{background:#7f1d1d}
+.toast.gone{animation:fadeDown .3s ease forwards}
+
+.loading-screen{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9998;gap:16px}
+.loading-screen .spinner{width:40px;height:40px;border:3px solid var(--maroon-light);border-top-color:var(--maroon);border-radius:50%;animation:spin .7s linear infinite}
+.loading-screen p{font-family:'DM Serif Display',serif;color:var(--maroon);font-size:16px}
+
+.empty{text-align:center;padding:3.5rem;color:var(--text-3);font-size:13.5px}
+.hidden{display:none!important}
+
+.footer{text-align:center;padding:16px;font-size:11px;color:var(--text-3);border-top:1px solid var(--border);background:var(--white);margin-top:40px}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes fadeDown{from{opacity:1;transform:none}to{opacity:0;transform:translateY(10px)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+@media(max-width:768px){
+  .header-inner{padding:14px 16px}.main{padding:16px 14px 40px}
+  .stat-row{grid-template-columns:repeat(2,minmax(0,1fr))}
+  thead th:nth-child(3),tbody td:nth-child(3){display:none}
+  .acts .act{padding:4px 7px;font-size:11px}.header-sub-inner{padding:7px 16px}
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen" class="loading-screen" style="background:#F0E8E8">
+  <div class="modal" style="width:360px">
+    <div class="modal-title">SSSNPWD Office Login</div>
+
+    <div class="fg">
+      <label>Email</label>
+      <input type="email" id="login-email" placeholder="admin@bsu.edu">
+    </div>
+
+    <div class="fg">
+      <label>Password</label>
+      <input type="password" id="login-pass" placeholder="Enter password">
+    </div>
+
+    <button class="btn btn-primary" style="width:100%" onclick="login()">
+      Login
+    </button>
+
+    <p style="margin-top:12px;font-size:12px;color:#888;text-align:center">
+      Supply Inventory System
+    </p>
+  </div>
+</div>
+
+<!-- Loading screen -->
+<div class="loading-screen" id="loading">
+  <div class="spinner"></div>
+  <p>Connecting to database…</p>
+</div>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-inner">
+    <div class="seal">
+  <img src="bsu-logo.png" alt="Batangas State University Logo">
+</div>
+    <div class="htext">
+      <div class="h-univ">Batangas State University</div>
+      <div class="h-office">Services for Students with Special Needs and Persons with Disabilities</div>
+      <span class="h-badge">SSSNPWD Office</span>
+    </div>
+  </div>
+  <div class="header-sub">
+    <div class="header-sub-inner">
+      <span class="hs-title">Supply Inventory &amp; Monitoring System</span>
+      <div class="hs-right">
+  <button class="btn btn-outline" onclick="logout()" 
+  style="padding:5px 12px;font-size:12px">
+  Logout
+  </button>
+  
+  <span class="hs-date" id="hdate"></span>
+  <span><span class="sync-dot" id="sync-dot"></span>
+  <span class="sync-label" id="sync-label">Connected</span></span>
+</div>
+        <span class="hs-date" id="hdate"></span>
+        <span><span class="sync-dot" id="sync-dot"></span><span class="sync-label" id="sync-label">Connected</span></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main" id="app-main" style="display:none">
+  <div class="stat-row" id="stats"></div>
+  <div id="alert-area"></div>
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('inv',this)">Inventory</button>
+    <button class="tab" onclick="switchTab('log',this)">Activity Log</button>
+  </div>
+  <div id="tab-inv">
+    <div class="toolbar">
+      <div class="sw">
+        <span class="sw-icon">🔍</span>
+        <input type="text" id="search" placeholder="Search supplies…" oninput="render()">
+      </div>
+      <select id="cf" onchange="render()">
+        <option value="">All categories</option>
+        <option>Office supplies</option>
+        <option>Paper &amp; printing</option>
+        <option>Assistive materials</option>
+        <option>Cleaning supplies</option>
+        <option>Pantry &amp; kitchen</option>
+        <option>Electronics &amp; accessories</option>
+      </select>
+      <select id="sf" onchange="render()">
+        <option value="">All statuses</option>
+        <option value="ok">OK</option>
+        <option value="low">Low</option>
+        <option value="critical">Critical</option>
+      </select>
+      <button class="btn btn-primary" onclick="openAdd()">+ Add Supply</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>Supply Name</th><th>Category</th><th>Stock Level</th>
+          <th>Qty / Unit</th><th>Reorder At</th><th>Status</th><th>Actions</th>
+        </tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+  <div id="tab-log" class="hidden">
+    <div class="log-wrap"><div id="loglist"></div></div>
+  </div>
+</div>
+
+<div class="footer">BSU SSSN-PDO &nbsp;·&nbsp; Supply Inventory &amp; Monitoring System &nbsp;·&nbsp; Powered by Supabase Cloud Database</div>
+<div id="mc"></div>
+
+<script>
+// ── SUPABASE CONFIG ──
+const SUPA_URL = 'https://ukwtlomhykasmufybjvk.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVrd3Rsb21oeWthc211ZnlianZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0OTc1ODQsImV4cCI6MjA5MDA3MzU4NH0.M-TlY_WqeLmQSISAoWJgJKhZlW3rqRnCZNI_ReqLDZM';
+const { createClient } = supabase;
+const db = createClient(SUPA_URL, SUPA_KEY);
+// ── AUTH ──
+async function login() {
+  const email = document.getElementById('login-email').value;
+  const password = document.getElementById('login-pass').value;
+
+  const { error } = await db.auth.signInWithPassword({
+    email,
+    password
+  });
+
+  if (error) {
+    alert("Login failed: " + error.message);
+    return;
+  }
+
+  document.getElementById('login-screen').style.display = 'none';
+  init();
+}
+
+async function logout() {
+  await db.auth.signOut();
+  location.reload();
+}
+
+// check session
+async function checkAuth() {
+  const { data } = await db.auth.getSession();
+
+  if (!data.session) {
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('loading').style.display = 'none';
+  } else {
+    document.getElementById('login-screen').style.display = 'none';
+    init();
+  }
+}
+
+const CATS = ['Office supplies','Paper & printing','Assistive materials','Cleaning supplies','Pantry & kitchen','Electronics & accessories'];
+const DEFAULT_ITEMS = [
+  {name:'A4 Bond Paper (ream)',      cat:'Paper & printing',          qty:12,unit:'reams',  reorder:5, max:30},
+  {name:'Ballpen (black)',            cat:'Office supplies',           qty:4, unit:'boxes',  reorder:5, max:20},
+  {name:'Whiteboard Markers',         cat:'Office supplies',           qty:8, unit:'pcs',    reorder:6, max:24},
+  {name:'Sticky Notes (pad)',         cat:'Office supplies',           qty:15,unit:'pads',   reorder:8, max:40},
+  {name:'Hearing Aid Batteries',      cat:'Assistive materials',       qty:2, unit:'packs',  reorder:4, max:16},
+  {name:'Braille Paper',              cat:'Assistive materials',       qty:6, unit:'reams',  reorder:3, max:12},
+  {name:'Staple Wire',                cat:'Office supplies',           qty:2, unit:'boxes',  reorder:3, max:15},
+  {name:'Dishwashing Liquid',         cat:'Cleaning supplies',         qty:3, unit:'bottles',reorder:4, max:12},
+  {name:'Tissue Paper (roll)',        cat:'Cleaning supplies',         qty:18,unit:'rolls',  reorder:10,max:48},
+  {name:'Printer Ink (black)',        cat:'Paper & printing',          qty:1, unit:'bottles',reorder:2, max:8},
+  {name:'Instant Coffee (box)',       cat:'Pantry & kitchen',          qty:7, unit:'boxes',  reorder:5, max:20},
+  {name:'USB-C Hub',                  cat:'Electronics & accessories', qty:3, unit:'pcs',    reorder:2, max:8},
+];
+
+let items = [];
+let logItems = [];
+
+// ── SYNC STATUS ──
+function setSyncStatus(state) {
+  const dot = document.getElementById('sync-dot');
+  const lbl = document.getElementById('sync-label');
+  if (!dot) return;
+  dot.className = 'sync-dot' + (state === 'syncing' ? ' syncing' : state === 'error' ? ' error' : '');
+  lbl.textContent = state === 'syncing' ? 'Syncing…' : state === 'error' ? 'Connection error' : 'Connected';
+}
+
+// ── HELPERS ──
+function status(i) {
+  if (i.qty === 0) return 'critical';
+  if (i.qty <= i.reorder) return i.qty <= Math.ceil(i.reorder / 2) ? 'critical' : 'low';
+  return 'ok';
+}
+function barColor(s) {
+  return s==='critical'?'var(--danger)':s==='low'?'var(--gold)':'#2A9E5C';
+}
+function fmtDate(ts) {
+  const d = new Date(ts);
+  return d.toLocaleString('en-PH',{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'});
+}
+function toast(msg, type='success') {
+  const el = document.createElement('div');
+  el.className = 'toast ' + (type==='error'?'error-t':'success');
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(()=>{el.classList.add('gone');setTimeout(()=>el.remove(),350)}, 2800);
+}
+
+// ── DATABASE OPS ──
+async function fetchItems() {
+  const {data,error} = await db.from('supplies').select('*').order('id');
+  if (error) throw error;
+  return data;
+}
+async function fetchLog() {
+  const {data,error} = await db.from('activity_log').select('*').order('ts',{ascending:false}).limit(100);
+  if (error) throw error;
+  return data;
+}
+async function insertItem(item) {
+  const {data,error} = await db.from('supplies').insert([item]).select().single();
+  if (error) throw error;
+  return data;
+}
+async function updateItem(id, changes) {
+  const {error} = await db.from('supplies').update(changes).eq('id',id);
+  if (error) throw error;
+}
+async function removeItem(id) {
+  const {error} = await db.from('supplies').delete().eq('id',id);
+  if (error) throw error;
+}
+async function insertLog(msg) {
+  const {error} = await db.from('activity_log').insert([{msg}]);
+  if (error) console.warn('Log error:', error);
+}
+
+// ── REALTIME ──
+function subscribeRealtime() {
+  db.channel('supplies-changes')
+    .on('postgres_changes',{event:'*',schema:'public',table:'supplies'}, async ()=>{
+      items = await fetchItems();
+      render();
+    })
+    .on('postgres_changes',{event:'*',schema:'public',table:'activity_log'}, async ()=>{
+      logItems = await fetchLog();
+      renderLog();
+    })
+    .subscribe();
+}
+
+// ── RENDER ──
+function renderStats() {
+  const tot=items.length,ok=items.filter(i=>status(i)==='ok').length,
+    low=items.filter(i=>status(i)==='low').length,
+    crit=items.filter(i=>status(i)==='critical').length;
+  document.getElementById('stats').innerHTML=`
+    <div class="stat-card"><div class="sc-label">Total Supplies</div><div class="sc-val">${tot}</div><div class="sc-sub">tracked items</div></div>
+    <div class="stat-card"><div class="sc-label">In Stock</div><div class="sc-val c-ok">${ok}</div><div class="sc-sub">adequate level</div></div>
+    <div class="stat-card"><div class="sc-label">Low Stock</div><div class="sc-val c-warn">${low}</div><div class="sc-sub">needs attention</div></div>
+    <div class="stat-card"><div class="sc-label">Critical / Out</div><div class="sc-val c-danger">${crit}</div><div class="sc-sub">reorder now</div></div>`;
+  const alerts=items.filter(i=>status(i)!=='ok');
+  document.getElementById('alert-area').innerHTML=alerts.length
+    ?`<div class="alert">⚠️ &nbsp;<div><strong>${alerts.length} item${alerts.length>1?'s':''} need restocking:</strong> ${alerts.map(i=>i.name).join(', ')}</div></div>`:''
+}
+
+function render() {
+  renderStats();
+  const q=document.getElementById('search').value.toLowerCase();
+  const cf=document.getElementById('cf').value;
+  const sf=document.getElementById('sf').value;
+  const fil=items.filter(i=>
+    (!q||i.name.toLowerCase().includes(q)||i.cat.toLowerCase().includes(q))&&
+    (!cf||i.cat===cf)&&(!sf||status(i)===sf));
+  const tb=document.getElementById('tbody');
+  if(!fil.length){tb.innerHTML=`<tr><td colspan="7" class="empty">No items match your filters.</td></tr>`;return}
+  tb.innerHTML=fil.map(item=>{
+    const s=status(item),pct=Math.min(100,Math.round(item.qty/item.max*100));
+    const bl={ok:'b-ok',low:'b-low',critical:'b-critical'}[s];
+    const bs={ok:'OK',low:'Low',critical:'Critical'}[s];
+    return`<tr>
+      <td style="font-weight:600">${item.name}</td>
+      <td style="color:var(--text-2)">${item.cat}</td>
+      <td><div class="bar-wrap"><div class="bar"><div class="bar-fill" style="width:${pct}%;background:${barColor(s)}"></div></div><span class="bar-pct">${pct}%</span></div></td>
+      <td><strong>${item.qty}</strong> <span style="color:var(--text-3);font-weight:400">${item.unit}</span></td>
+      <td style="color:var(--text-3)">${item.reorder} ${item.unit}</td>
+      <td><span class="badge ${bl}">${bs}</span></td>
+      <td><div class="acts">
+        <button class="act" onclick="openAdj(${item.id},1)">+ Add</button>
+        <button class="act" onclick="openAdj(${item.id},-1)">− Use</button>
+        <button class="act" onclick="openEdit(${item.id})">Edit</button>
+        <button class="act del" onclick="delItem(${item.id})">Remove</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+function renderLog() {
+  document.getElementById('loglist').innerHTML=logItems.length
+    ?logItems.map(l=>`<div class="log-entry">
+        <span class="log-time">${fmtDate(l.ts)}</span>
+        <span class="log-dot"></span>
+        <span class="log-msg">${l.msg}</span>
+      </div>`).join('')
+    :`<p class="empty">No activity recorded yet.</p>`;
+}
+
+function switchTab(t,btn) {
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-inv').classList.toggle('hidden',t!=='inv');
+  document.getElementById('tab-log').classList.toggle('hidden',t!=='log');
+  if(t==='log') renderLog();
+}
+
+// ── MODALS ──
+function showModal(html){document.getElementById('mc').innerHTML=`<div class="overlay" onclick="closeM()"><div class="modal" onclick="event.stopPropagation()">${html}</div></div>`}
+function closeM(){document.getElementById('mc').innerHTML=''}
+
+// ADD
+function openAdd(){
+  showModal(`<div class="modal-title">Add New Supply</div>
+    <div class="fg"><label>Supply Name</label><input type="text" id="mn" placeholder="e.g. Correction Tape"></div>
+    <div class="fg"><label>Category</label><select id="mc2">${CATS.map(c=>`<option>${c}</option>`).join('')}</select></div>
+    <div class="fg"><label>Current Quantity</label><input type="number" id="mq" min="0" value="0"></div>
+    <div class="fg"><label>Unit</label><input type="text" id="mu" placeholder="pcs / reams / boxes…" value="pcs"></div>
+    <div class="fg"><label>Reorder Threshold</label><input type="number" id="mr" min="1" value="5"></div>
+    <div class="fg"><label>Max Quantity (for stock bar display)</label><input type="number" id="mm" min="1" value="20"></div>
+    <div class="modal-btns">
+      <button class="btn btn-primary" onclick="submitAdd()">Add Supply</button>
+      <button class="btn btn-outline" onclick="closeM()">Cancel</button>
+    </div>`);
+}
+async function submitAdd(){
+  const name=document.getElementById('mn').value.trim();
+  if(!name){alert('Please enter a supply name.');return}
+  const cat=document.getElementById('mc2').value;
+  const qty=parseInt(document.getElementById('mq').value)||0;
+  const unit=document.getElementById('mu').value.trim()||'pcs';
+  const reorder=parseInt(document.getElementById('mr').value)||5;
+  const max=parseInt(document.getElementById('mm').value)||20;
+  setSyncStatus('syncing');
+  try{
+    await insertItem({name,cat,qty,unit,reorder,max});
+    await insertLog(`Added new supply: <strong>${name}</strong> (${qty} ${unit})`);
+    items=await fetchItems();
+    closeM();render();
+    toast(`✓ "${name}" added to inventory`);
+  }catch(e){toast('Error saving. Please try again.','error')}
+  setSyncStatus('ok');
+}
+
+// EDIT
+function openEdit(id){
+  const i=items.find(x=>x.id===id);
+  showModal(`<div class="modal-title">Edit Supply</div>
+    <div class="fg"><label>Supply Name</label><input type="text" id="mn" value="${i.name}"></div>
+    <div class="fg"><label>Category</label><select id="mc2">${CATS.map(c=>`<option${c===i.cat?' selected':''}>${c}</option>`).join('')}</select></div>
+    <div class="fg"><label>Unit</label><input type="text" id="mu" value="${i.unit}"></div>
+    <div class="fg"><label>Reorder Threshold</label><input type="number" id="mr" value="${i.reorder}" min="1"></div>
+    <div class="fg"><label>Max Quantity</label><input type="number" id="mm" value="${i.max}" min="1"></div>
+    <div class="modal-btns">
+      <button class="btn btn-primary" onclick="submitEdit(${id})">Save Changes</button>
+      <button class="btn btn-outline" onclick="closeM()">Cancel</button>
+    </div>`);
+}
+async function submitEdit(id){
+  const i=items.find(x=>x.id===id);
+  const name=document.getElementById('mn').value.trim()||i.name;
+  const cat=document.getElementById('mc2').value;
+  const unit=document.getElementById('mu').value.trim()||i.unit;
+  const reorder=parseInt(document.getElementById('mr').value)||i.reorder;
+  const max=parseInt(document.getElementById('mm').value)||i.max;
+  setSyncStatus('syncing');
+  try{
+    await updateItem(id,{name,cat,unit,reorder,max});
+    await insertLog(`Updated supply details: <strong>${name}</strong>`);
+    items=await fetchItems();
+    closeM();render();
+    toast(`✓ "${name}" updated`);
+  }catch(e){toast('Error saving. Please try again.','error')}
+  setSyncStatus('ok');
+}
+
+// ADJUST
+function openAdj(id,dir){
+  const i=items.find(x=>x.id===id);
+  const title=dir>0?'Restock Supply':'Use / Consume Supply';
+  const lbl=dir>0?'Quantity Received':'Quantity Used';
+  showModal(`<div class="modal-title">${title}</div>
+    <div class="info-box"><strong>${i.name}</strong><br><span style="color:var(--text-2)">Current stock: ${i.qty} ${i.unit}</span></div>
+    <div class="fg"><label>${lbl}</label><input type="number" id="madj" min="1" value="1"></div>
+    <div class="fg"><label>Note (optional)</label><input type="text" id="mnote" placeholder="e.g. monthly restock, used for event…"></div>
+    <div class="modal-btns">
+      <button class="btn btn-primary" onclick="submitAdj(${id},${dir})">Confirm</button>
+      <button class="btn btn-outline" onclick="closeM()">Cancel</button>
+    </div>`);
+}
+async function submitAdj(id,dir){
+  const i=items.find(x=>x.id===id);
+  const amt=parseInt(document.getElementById('madj').value)||1;
+  const note=document.getElementById('mnote').value.trim();
+  if(dir<0&&i.qty-amt<0){alert('Not enough stock.');return}
+  const newQty=Math.max(0,i.qty+dir*amt);
+  setSyncStatus('syncing');
+  try{
+    await updateItem(id,{qty:newQty});
+    const act=dir>0?'Restocked':'Used';
+    await insertLog(`${act} <strong>${amt} ${i.unit}</strong> of ${i.name}${note?' — '+note:''}`);
+    items=await fetchItems();
+    closeM();render();
+    toast(`✓ Stock updated for "${i.name}"`);
+  }catch(e){toast('Error saving. Please try again.','error')}
+  setSyncStatus('ok');
+}
+
+// DELETE
+async function delItem(id){
+  const i=items.find(x=>x.id===id);
+  if(!confirm(`Remove "${i.name}" from the inventory?\n\nThis cannot be undone.`))return;
+  setSyncStatus('syncing');
+  try{
+    await insertLog(`Removed supply: <strong>${i.name}</strong>`);
+    await removeItem(id);
+    items=await fetchItems();
+    render();
+    toast(`"${i.name}" removed`);
+  }catch(e){toast('Error removing item. Please try again.','error')}
+  setSyncStatus('ok');
+}
+
+// ── INIT ──
+document.getElementById('hdate').textContent=
+  new Date().toLocaleDateString('en-PH',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+
+async function init(){
+  try{
+    items=await fetchItems();
+    // Seed default data if table is empty
+    if(items.length===0){
+      setSyncStatus('syncing');
+      for(const item of DEFAULT_ITEMS){
+        await insertItem(item);
+      }
+      await insertLog('System initialized with default supply items.');
+      items=await fetchItems();
+    }
+    logItems=await fetchLog();
+    subscribeRealtime();
+    document.getElementById('loading').style.display='none';
+    document.getElementById('app-main').style.display='block';
+    setSyncStatus('ok');
+    render();
+  }catch(e){
+    document.getElementById('loading').innerHTML=`
+      <div style="text-align:center;padding:2rem">
+        <p style="color:var(--danger);font-size:16px;margin-bottom:8px">⚠ Could not connect to database</p>
+        <p style="color:var(--text-3);font-size:13px">Please check your internet connection and try again.</p>
+        <button onclick="location.reload()" style="margin-top:16px;padding:9px 20px;background:var(--maroon);color:#fff;border:none;border-radius:10px;font-size:13px;cursor:pointer">Retry</button>
+      </div>`;
+    setSyncStatus('error');
+  }
+}
+// auto logout when tab/browser closes
+window.addEventListener("beforeunload", async () => {
+  await db.auth.signOut();
+});
+
+checkAuth();
+</script>
+</body>
+</html>
